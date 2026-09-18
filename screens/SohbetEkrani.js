@@ -33,6 +33,7 @@ export default function SohbetEkrani({ sunucuAdres, token, onCikis, onAdresGunce
   const [digerKullanici, setDigerKullanici] = useState(null);
   const [ayarAcik, setAyarAcik] = useState(false);
   const [yeniAdres, setYeniAdres] = useState(sunucuAdres);
+  const [sonHata, setSonHata] = useState(null);
   const insets = useSafeAreaInsets();
 
   const wsRef = useRef(null);
@@ -69,6 +70,7 @@ export default function SohbetEkrani({ sunucuAdres, token, onCikis, onAdresGunce
 
     ws.onopen = () => {
       setBaglandi(true);
+      setSonHata(null);
       gecmisiCek();
     };
 
@@ -108,15 +110,16 @@ export default function SohbetEkrani({ sunucuAdres, token, onCikis, onAdresGunce
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (olay) => {
       setBaglandi(false);
+      setSonHata({ tur: 'kapandi', kod: olay?.code, mesaj: olay?.reason });
       if (!kapatildiMi.current) {
         yenidenBaglanZamanlayici.current = setTimeout(baglan, 2500);
       }
     };
 
-    ws.onerror = () => {
-      // onclose zaten tetiklenecek, burada ekstra islem gerekmiyor
+    ws.onerror = (olay) => {
+      setSonHata({ tur: 'hata', mesaj: olay?.message });
     };
   }, [sunucuAdres, token, gecmisiCek]);
 
@@ -186,7 +189,13 @@ export default function SohbetEkrani({ sunucuAdres, token, onCikis, onAdresGunce
           <View style={[styles.durumNoktasi, { backgroundColor: baglandi ? renkler.basarili : renkler.metinSoluk }]} />
           <View>
             <Text style={styles.headerBaslik}>{digerKullanici || 'Sohbet'}</Text>
-            <Text style={styles.headerAltyazi}>{baglandi ? 'Bağlı' : 'Bağlanıyor...'}</Text>
+            <Text style={styles.headerAltyazi} numberOfLines={2}>
+              {baglandi
+                ? 'Bağlı'
+                : sonHata
+                ? `Bağlanamadı — ${sonHata.tur}${sonHata.kod ? ' kod:' + sonHata.kod : ''}${sonHata.mesaj ? ' (' + sonHata.mesaj + ')' : ''}`
+                : 'Bağlanıyor...'}
+            </Text>
           </View>
         </View>
         <TouchableOpacity onPress={() => setAyarAcik(true)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
